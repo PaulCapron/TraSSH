@@ -1,0 +1,12 @@
+[Unit]
+Description=SSH trolling dæmon socket
+
+[Install]
+WantedBy=sockets.target
+
+[Socket]
+ListenStream=0.0.0.0:22
+DeferAcceptSec=1s
+Backlog=24
+
+IPAccounting=true

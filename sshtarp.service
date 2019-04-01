@@ -1,0 +1,44 @@
+[Unit]
+Description=SSH trolling dæmon
+Requires=sshtarp.socket
+
+[Service]
+ExecStart=$MAKEFILE_PREFIX/bin/sshtarp
+StandardOutput=journal
+NonBlocking=true
+
+Restart=always
+TimeoutStopSec=1s
+
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+OOMScoreAdjust=1000
+
+LimitNPROC=1
+LimitNOFILE=720
+LimitFSIZE=0
+LimitRSS=96K
+LimitAS=1M
+
+NoNewPrivileges=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET
+
+User=nobody
+DynamicUser=true
+PrivateUsers=true
+KeyringMode=private
+
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+DevicePolicy=strict
+
+InaccessibleDirectories=/bin /boot /etc /lib /lib64 /mnt /media
+InaccessibleDirectories=/opt /proc /sbin /srv /sys /tmp /usr
+
+SystemCallFilter=epoll_create1 epoll_ctl epoll_pwait
+SystemCallFilter=accept4 setsockopt write close
+SystemCallFilter=arch_prctl
+SystemCallArchitectures=native
