@@ -102,7 +102,7 @@ utoa(unsigned num, char *dst)
     return len;
 }
 
-static ssize_t
+static ssize_t __attribute__((format(printf, 2, 3)))
 dprintf(int fd, const char *fmt, ...)
 {
     static char buf[256];
@@ -132,7 +132,7 @@ dprintf(int fd, const char *fmt, ...)
     return write(fd, buf, j);
 }
 
-static void
+static void __attribute__((cold))
 die(const char *msg)
 {
     dprintf(STDERR_FILENO, "%s: %s\n", msg, strerror(errno));
