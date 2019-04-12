@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
-import socket, libssh2
+import libssh2  # sudo apt install python-libssh2
+import socket
 
 ssh  = libssh2.Session()
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
