@@ -18,6 +18,7 @@
  */
 
 #define _GNU_SOURCE  /* accept4 */
+#include <netinet/in.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <errno.h>
@@ -88,16 +89,17 @@ scramble(unsigned long x[4])  /* xoshiro256, http://xoshiro.di.unimi.it */
 }
 
 static size_t
-utoa(unsigned num, char *dst)
+utoa(unsigned num, char *dst, unsigned radix)  /* does not null-terminate dst */
 {
-    unsigned n;
+    unsigned n, r;
     size_t len;
 
-    for (n = num, len = 1; n > 9; n /= 10, len++) ;  /* count base 10 */
+    for (n = num, len = 1; n > radix-1; n /= radix, len++) ;  /* count digits */
     n = len - 1;  /* write in reverse */
     do {
-        dst[n--] = '0' + (num % 10);
-        num /= 10;
+        r = num % radix;
+        dst[n--] = (r < 10) ? ('0' + r) : ('a' + r - 10);
+        num /= radix;
     } while (num > 0);
     return len;
 }
@@ -118,7 +120,10 @@ dprintf(int fd, const char *fmt, ...)
         }
         switch (fmt[++i]) {
         case 'u':
-            j += utoa(va_arg(args, unsigned), buf + j);
+            j += utoa(va_arg(args, unsigned), buf + j,  10);
+            break;
+        case 'x':
+            j += utoa(va_arg(args, unsigned), buf + j,  16);
             break;
         case 's':
             s = va_arg(args, char*);
@@ -142,11 +147,15 @@ die(const char *msg)
 static int
 welcome_new_client(int srvfd, int epollfd)
 {
+    struct sockaddr_storage addr;
+    socklen_t addrlen;
     int fd;
     size_t bufsiz;
     struct epoll_event evt;
+    unsigned char *ip;
 
-    fd = accept4(srvfd, NULL, NULL, SOCK_NONBLOCK|SOCK_CLOEXEC);
+    addrlen = sizeof addr;
+    fd = accept4(srvfd, (struct sockaddr *)&addr, &addrlen, SOCK_NONBLOCK);
     if (fd == -1) {
         if (errno == EAGAIN)
             return -1;  /* no more queued clients */
@@ -171,7 +180,26 @@ welcome_new_client(int srvfd, int epollfd)
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &evt) == -1)
         die("epoll_clt");
 
-    dprintf(STDOUT_FILENO, "new con, fd %u\n", (unsigned)fd);
+    switch (addr.ss_family) {
+    case AF_INET:
+        ip = (unsigned char *)&((struct sockaddr_in *)&addr)->sin_addr;
+        dprintf(STDOUT_FILENO, "new con from %u.%u.%u.%u, fd %u\n",
+                ip[0], ip[1], ip[2], ip[3], fd);
+        break;
+    case AF_INET6:
+        ip = (unsigned char *)&((struct sockaddr_in6 *)&addr)->sin6_addr;
+        dprintf(STDOUT_FILENO, "new con from %x:%x:%x:%x:%x:%x:%x:%x, fd %u\n",
+                (ip[ 0]<<8) + ip[ 1],  (ip[ 2]<<8) + ip[ 3],
+                (ip[ 4]<<8) + ip[ 5],  (ip[ 6]<<8) + ip[ 7],
+                (ip[ 8]<<8) + ip[ 9],  (ip[10]<<8) + ip[11],
+                (ip[12]<<8) + ip[13],  (ip[14]<<8) + ip[15],  fd);
+        /* This doesn't shorten the longest run of "0:" to "::", or special-case
+           IPv4-mapped addresses. RFC 5952 says these are SHOULD, not MUST.
+           And this program is intended for service over IPv4. */
+        break;
+    default:
+        dprintf(STDOUT_FILENO, "new con, fd %u\n", fd);
+    }
     return 1;
 }
 
