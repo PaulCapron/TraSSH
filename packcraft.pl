@@ -1,13 +1,22 @@
 #!/usr/bin/env perl
-# Manually guided SSH packet generation. See RFC4253.
+# Half-automated SSH packet generation. See RFC 4253 & RFC 4251.
+#
+# This script outputs a valid SSH key-exchange packet (in binary format),
+# to be then manually copy/pasted in sshtarp.c
+#
+# `hexdump'/`hd' is your friend to transform the output of this script to proper
+# C character literals or hexadecimal escape sequences. Yeah, that’s laborious,
+# but it’s basically a one-time job. And everything that can be done statically,
+# at (pre-)compile time, should be done that way!
+#
 use strict;
 use warnings;
 
 use constant {
-  SIZEOF_PACKLEN_FIELD => 4,  # uint32
-  SIZEOF_PADLEN_FIELD  => 1,  # byte
+  SIZEOF_PACKLEN_FIELD => 4,  # one uint32 (four bytes)
+  SIZEOF_PADLEN_FIELD  => 1,  # one byte
 
-  SSH_MSG_KEXINIT => 20  # message code
+  SSH_MSG_KEXINIT => 20  # see https://tools.ietf.org/html/rfc4253#section-12
 };
 
 # Encapsulate in SSH wire format the given payload.
@@ -34,6 +43,14 @@ sub craft_ssh_packet($) {
       . $pad;
 }
 
+# Structure as an SSH "name-list" the given strings.
+# See https://tools.ietf.org/html/rfc4251#section-5
+sub pack_name_list(@) {
+  my $str = join(',', @_);
+  return pack('N', length $str), $str;
+};
+
+# See https://tools.ietf.org/html/rfc4253#section-7.1
 my @kex_algorithms = ('diffie-hellman-group14-sha1');
 my @server_host_key_algorithms = ('ssh-rsa');
 my @encryption_algorithms_client_to_server = ('aes128-cbc');
@@ -44,11 +61,6 @@ my @compression_algorithms_client_to_server = ('none');
 my @compression_algorithms_server_to_client = ('zlib', 'none');
 my @languages_client_to_server = ();
 my @languages_server_to_client = ();
-
-sub pack_name_list(@) {
-  my $str = join(',', @_);
-  return pack('N', length $str), $str;
-};
 
 my @packed_lists = (
   pack_name_list(@kex_algorithms),
