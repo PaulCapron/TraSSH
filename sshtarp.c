@@ -68,7 +68,7 @@ static const unsigned char BANNER_AND_KEXINIT[246] = {
     0, 0, 0,  9, 'z','l','i','b',',','n','o','n','e',     /* compression, s2c */
     0, 0, 0,  0,                                          /*   languages, c2s */
     0, 0, 0,  0,                                          /*   languages, s2c */
-    1,                                          /*  first kex packet follows? */
+    0,                                 /* first (guessed) kex packet follows? */
     0, 0, 0, 0,                            /* "reserved for future extension" */
     'e','v','a',':','*',':',  /* padding, delicious like the cookie */
 

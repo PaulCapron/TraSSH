@@ -4,4 +4,4 @@
 echo This process should hang!
 sleep .5
 
-exec ssh -vv localhost
+exec ssh -vvv localhost

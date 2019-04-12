@@ -78,7 +78,7 @@ my @packed_lists = (
 my $payload = pack('C', SSH_MSG_KEXINIT)
     . "erhart:/bin/csh\n"  # suspicious "random" cookie
     . join('', @packed_lists)
-    . pack('C', 1)   # guessed kex follows?
+    . pack('C', 0)   # guessed kex follows?
     . pack('N', 0);  # "reserved for future use" by RFC4253
 
 my $packet = craft_ssh_packet($payload);
