@@ -4,8 +4,8 @@ Requires=sshtarp.socket
 
 [Service]
 ExecStart=$MAKEFILE_PREFIX/bin/sshtarp
+StandardInput=socket
 StandardOutput=journal
-NonBlocking=true
 
 Restart=always
 TimeoutStopSec=1s

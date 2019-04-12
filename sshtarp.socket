@@ -7,7 +7,7 @@ WantedBy=sockets.target
 [Socket]
 ListenStream=0.0.0.0:22
 DeferAcceptSec=1s
-Backlog=24
+Backlog=16
 
 # The client sockets will inherit the following options, which is the point.
 # Client data is never read, and sent data is always written in small chunks.

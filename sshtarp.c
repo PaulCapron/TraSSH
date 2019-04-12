@@ -31,7 +31,7 @@ enum {
     SLEEP_TIME =   9,  /* seconds of rest between epoll runs     */
     COMA_TIME  = SLEEP_TIME * 3,  /* rest if max events reached  */
 
-    LISTEN_FD = STDERR_FILENO + 1,  /* server socket, passed by systemd */
+    LISTEN_FD = STDIN_FILENO,  /* server socket, passed by systemd */
 
     SSH_MSG_KEYXINIT    = 20,  /* code for a SSH key-exchange init message */
     SSH_MSG_KEXDH_REPLY = 32   /* Diffie-Hellman key exchange, from server */
@@ -155,11 +155,8 @@ welcome_new_client(int srvfd, int epollfd)
 
     addrlen = sizeof addr;
     fd = accept4(srvfd, (struct sockaddr *)&addr, &addrlen, SOCK_NONBLOCK);
-    if (fd == -1) {
-        if (errno == EAGAIN)
-            return -1;  /* no more queued clients */
+    if (fd == -1)
         die("accept4");
-    }
 
     if (write(fd, BANNER_AND_KEXINIT, sizeof BANNER_AND_KEXINIT) < 1) {
         dprintf(STDOUT_FILENO, "could not greet %u: %s\n",
@@ -230,9 +227,6 @@ main()
     junk[2] += getuid();
     junk[3] *= getpid();
 
-    if (STDIN_FILENO != LISTEN_FD)
-        close(STDIN_FILENO);  /* reuse */
-
     epfd = epoll_create1(EPOLL_CLOEXEC);  /* safety close-on-exec */
     if (epfd == -1)
         die("epoll_create1");
@@ -250,7 +244,7 @@ main()
         scramble(junk);
         for (i = 0; i < nevts; i++)
             if (evts[i].data.fd == LISTEN_FD)
-                while (welcome_new_client(LISTEN_FD, epfd) != -1) ;
+                welcome_new_client(LISTEN_FD, epfd);
             else
                 handle_client(evts[i], junk, sizeof junk / 2);
 
