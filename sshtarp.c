@@ -105,9 +105,9 @@ utoa(unsigned num, char *dst, unsigned radix)  /* does not null-terminate dst */
 }
 
 static ssize_t __attribute__((format(printf, 2, 3)))
-dprintf(int fd, const char *fmt, ...)
+dprintf(int fd, const char *fmt, ...)  /* light version of stdio dprintf */
 {
-    static char buf[256];
+    char buf[256];
     va_list args;
     int i, j;
     char *s;
