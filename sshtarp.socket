@@ -9,4 +9,11 @@ ListenStream=0.0.0.0:22
 DeferAcceptSec=1s
 Backlog=24
 
+# The client sockets will inherit the following options, which is the point.
+# Client data is never read, and sent data is always written in small chunks.
+# So use the lowest possible buffer sizes, to reduce memory usage.
+# Note that the kernel will actually allocate more, a few kilos per buffer.
+ReceiveBuffer=1
+SendBuffer=256
+
 IPAccounting=true

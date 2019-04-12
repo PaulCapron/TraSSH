@@ -39,6 +39,6 @@ InaccessibleDirectories=/bin /boot /etc /lib /lib64 /mnt /media
 InaccessibleDirectories=/opt /proc /sbin /srv /sys /tmp /usr
 
 SystemCallFilter=epoll_create1 epoll_ctl epoll_pwait
-SystemCallFilter=accept4 setsockopt write close
+SystemCallFilter=accept4 write close
 SystemCallFilter=arch_prctl
 SystemCallArchitectures=native

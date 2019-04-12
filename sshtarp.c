@@ -150,7 +150,6 @@ welcome_new_client(int srvfd, int epollfd)
     struct sockaddr_storage addr;
     socklen_t addrlen;
     int fd;
-    size_t bufsiz;
     struct epoll_event evt;
     unsigned char *ip;
 
@@ -161,12 +160,6 @@ welcome_new_client(int srvfd, int epollfd)
             return -1;  /* no more queued clients */
         die("accept4");
     }
-
-    bufsiz = sizeof BANNER_AND_KEXINIT;  /* will actually use more */
-    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &bufsiz, sizeof bufsiz) == -1)
-        die("setsockopt(SO_RCVBUF)");
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsiz, sizeof bufsiz) == -1)
-        die("setsockopt(SO_SNDBUF)");
 
     if (write(fd, BANNER_AND_KEXINIT, sizeof BANNER_AND_KEXINIT) < 1) {
         dprintf(STDOUT_FILENO, "could not greet %u: %s\n",
