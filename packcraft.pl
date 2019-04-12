@@ -52,11 +52,11 @@ sub pack_name_list(@) {
 
 # See https://tools.ietf.org/html/rfc4253#section-7.1
 my @kex_algorithms = ('diffie-hellman-group14-sha1');
-my @server_host_key_algorithms = ('ssh-rsa');
-my @encryption_algorithms_client_to_server = ('aes128-cbc');
-my @encryption_algorithms_server_to_client = ('aes128-cbc');
-my @mac_algorithms_client_to_server = ('hmac-sha1');
-my @mac_algorithms_server_to_client = ('hmac-sha1');
+my @server_host_key_algorithms = ('ssh-rsa', 'ssh-dss');
+my @encryption_algorithms_client_to_server = ('aes256-ctr', 'aes128-cbc');
+my @encryption_algorithms_server_to_client = ('aes256-ctr', 'aes128-cbc');
+my @mac_algorithms_client_to_server = ('hmac-sha2-256', 'hmac-sha1');
+my @mac_algorithms_server_to_client = ('hmac-sha2-256', 'hmac-sha1');
 my @compression_algorithms_client_to_server = ('none');
 my @compression_algorithms_server_to_client = ('zlib', 'none');
 my @languages_client_to_server = ();

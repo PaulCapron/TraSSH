@@ -37,7 +37,7 @@ enum {
     SSH_MSG_KEXDH_REPLY = 32   /* Diffie-Hellman key exchange, from server */
 };
 
-static const unsigned char BANNER_AND_KEXINIT[182] = {
+static const unsigned char BANNER_AND_KEXINIT[246] = {
     /*
      * The identification string, aka "banner". Appear known-to-be-weak,
      * https://gist.github.com/0x4D31/35ddb0322530414bbb4c3288292749cc
@@ -48,24 +48,29 @@ static const unsigned char BANNER_AND_KEXINIT[182] = {
     /*
      * A valid and innocent "start of key exchange" packet.
      */
-    0, 0, 0, 148,      /* packet length  */
-    5,                 /* padding length */
+    0, 0, 0, 212,      /* packet length  */
+    6,                 /* padding length */
     SSH_MSG_KEYXINIT,  /* message type   */
     'e','r','h','a','r','t',':','/','b','i','n','/','c','s','h','\n', /* cook */
     0, 0, 0, 27, 'd','i','f','f','i','e','-','h','e','l','l','m','a','n',
-    '-','g','r','o','u','p','1','4','-','s','h','a','1',   /*     key echange */
-    0, 0, 0,  7, 's','s','h','-','r','s','a',              /*        host key */
-    0, 0, 0, 10, 'a','e','s','1','2','8','-','c','b','c',  /* encryption, c2s */
-    0, 0, 0, 10, 'a','e','s','1','2','8','-','c','b','c',  /* encryption, s2c */
-    0, 0, 0,  9, 'h','m','a','c','-','s','h','a','1',      /*        MAC, c2s */
-    0, 0, 0,  9, 'h','m','a','c','-','s','h','a','1',      /*        MAC, s2c */
+    '-','g','r','o','u','p','1','4','-','s','h','a','1',  /*      key echange */
+    0, 0, 0, 15, 's','s','h','-','r','s','a',',',
+    's','s','h','-','d','s','s',                          /*         host key */
+    0, 0, 0, 21, 'a','e','s','2','5','6','-','c','t','r',',',
+    'a','e','s','1','2','8','-','c','b','c',              /*  encryption, c2s */
+    0, 0, 0, 21, 'a','e','s','2','5','6','-','c','t','r',',',
+    'a','e','s','1','2','8','-','c','b','c',              /*  encryption, s2c */
+    0, 0, 0, 23, 'h','m','a','c','-','s','h','a','2','-','2','5','6',',',
+    'h','m','a','c','-','s','h','a','1',                  /*         MAC, c2s */
+    0, 0, 0, 23, 'h','m','a','c','-','s','h','a','2','-','2','5','6',',',
+    'h','m','a','c','-','s','h','a','1',                  /*         MAC, s2c */
     0, 0, 0,  4, 'n','o','n','e',                         /* compression, c2s */
-    0, 0, 0,  4, 'n','o','n','e',                         /* compression, s2c */
-    0, 0, 0,  0,                                           /*  languages, c2s */
-    0, 0, 0,  0,                                           /*  languages, s2c */
+    0, 0, 0,  9, 'z','l','i','b',',','n','o','n','e',     /* compression, s2c */
+    0, 0, 0,  0,                                          /*   languages, c2s */
+    0, 0, 0,  0,                                          /*   languages, s2c */
     1,                                          /*  first kex packet follows? */
     0, 0, 0, 0,                            /* "reserved for future extension" */
-    'e','v','a',':','*',  /* padding, deliciously suspicious like the cookie */
+    'e','v','a',':','*',':',  /* padding, delicious like the cookie */
 
     /*
      * Finally, the start of a "key exchange, step 2, from server" message.
