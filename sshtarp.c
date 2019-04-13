@@ -33,7 +33,7 @@ enum {
 
     LISTEN_FD = STDIN_FILENO,  /* server socket, passed by systemd */
 
-    SSH_MSG_KEYXINIT    = 20,  /* code for a SSH key-exchange init message */
+    SSH_MSG_KEXINIT     = 20,  /* code for a SSH key-exchange init message */
     SSH_MSG_KEXDH_REPLY = 32   /* Diffie-Hellman key exchange, from server */
 };
 
@@ -50,7 +50,7 @@ static const unsigned char BANNER_AND_KEXINIT[246] = {
      */
     0, 0, 0, 212,      /* packet length  */
     6,                 /* padding length */
-    SSH_MSG_KEYXINIT,  /* message type   */
+    SSH_MSG_KEXINIT,   /* message type   */
     'e','r','h','a','r','t',':','/','b','i','n','/','c','s','h','\n', /* cook */
     0, 0, 0, 27, 'd','i','f','f','i','e','-','h','e','l','l','m','a','n',
     '-','g','r','o','u','p','1','4','-','s','h','a','1',  /*      key echange */
