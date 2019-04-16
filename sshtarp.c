@@ -34,7 +34,7 @@ enum {
     LISTEN_FD = STDIN_FILENO,  /* server socket, passed by systemd */
 
     SSH_MSG_KEXINIT     = 20,  /* code for a SSH key-exchange init message */
-    SSH_MSG_KEXDH_REPLY = 32   /* Diffie-Hellman key exchange, from server */
+    SSH_MSG_KEXDH_REPLY = 31   /* Diffie-Hellman key exchange, from server */
 };
 
 static const unsigned char BANNER_AND_KEXINIT[246] = {
