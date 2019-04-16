@@ -77,7 +77,7 @@ static const unsigned char BANNER_AND_KEXINIT[246] = {
      * The rest of this "message" will be random bytes, sent in handle_client.
      * But most clients realize it is invalid only after full reception!
      */
-    0, 0, 0x7f, 0xfc,  /* clients MUST be able to handle at least ~32k */
+    0, 0, 0x9c, 0x3c,  /* ~ max packet length allowed by libssh2 (40kB) ;-) */
     4,                 /* minimum bytes of padding */
     SSH_MSG_KEXDH_REPLY,
     0, 0,  /* high bytes of "key & certificates" length (keep it plausible) */
