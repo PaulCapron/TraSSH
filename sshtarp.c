@@ -37,7 +37,7 @@ enum {
     SSH_MSG_KEXDH_REPLY = 31   /* Diffie-Hellman key exchange, from server */
 };
 
-static const unsigned char BANNER_AND_KEXINIT[246] = {
+static const unsigned char BANNER_AND_KEXINIT[238] = {
     /*
      * The identification string, aka "banner". Appear known-to-be-weak,
      * https://gist.github.com/0x4D31/35ddb0322530414bbb4c3288292749cc
@@ -68,30 +68,18 @@ static const unsigned char BANNER_AND_KEXINIT[246] = {
     0, 0, 0,  9, 'z','l','i','b',',','n','o','n','e',     /* compression, s2c */
     0, 0, 0,  0,                                          /*   languages, c2s */
     0, 0, 0,  0,                                          /*   languages, s2c */
-    0,                                 /* first (guessed) kex packet follows? */
+    1,                                 /* first (guessed) kex packet follows? */
     0, 0, 0, 0,                            /* "reserved for future extension" */
     'e','v','a',':','*',':',  /* padding, delicious like the cookie */
-
-    /*
-     * Finally, the start of a "key exchange, step 2, from server" message.
-     * The rest of this "message" will be random bytes, sent in handle_client.
-     * But most clients realize it is invalid only after full reception!
-     */
-    0, 0, 0x9c, 0x3c,  /* ~ max packet length allowed by libssh2 (40kB) ;-) */
-    4,                 /* minimum bytes of padding */
-    SSH_MSG_KEXDH_REPLY,
-    0, 0,  /* high bytes of "key & certificates" length (keep it plausible) */
 };
 
-static void
-scramble(unsigned long x[4])  /* xoshiro256, http://xoshiro.di.unimi.it */
-{
-     unsigned long t = x[1] << 17;
-
-     x[2] ^= x[0];  x[3] ^= x[1];  x[1] ^= x[2];  x[0] ^= x[3];
-     x[2] ^= t;
-     x[3] = (x[3] << 45) | (x[3] >> (64 - 45));  /* rotl 45 */
-}
+static const unsigned char BOGUS_DATA[16] = {  /* junk repeatedly sent */
+    0, 0, 0x9c, 0x3c,  /* ~ max packet length allowed by libssh2 (40kB) ;-) */
+    12,
+    SSH_MSG_KEXDH_REPLY,
+    0, 0, 0x9b, 0,     /* "key & certificates" length (keep it plausible)   */
+    '1','0','2','9',':','1'
+};
 
 static size_t
 utoa(unsigned num, char *dst, unsigned radix)  /* does not null-terminate dst */
@@ -227,10 +215,6 @@ main()
 {
     int epfd, nevts, i;
     struct epoll_event evt, evts[MAX_EVENTS];
-    unsigned long junk[4] = { 0xDeadBeefFeed5eed, 0xBa0bab, 0xCafeCaCa0, 421 };
-
-    junk[2] += getuid();
-    junk[3] *= getpid();
 
     epfd = epoll_create1(EPOLL_CLOEXEC);  /* safety close-on-exec */
     if (epfd == -1)
@@ -246,12 +230,11 @@ main()
         if (nevts == -1)
             die("epoll_wait");
 
-        scramble(junk);
         for (i = 0; i < nevts; i++)
             if (evts[i].data.fd == LISTEN_FD)
                 welcome_new_client(LISTEN_FD, epfd);
             else
-                handle_client(evts[i], junk, sizeof junk / 2);
+                handle_client(evts[i], BOGUS_DATA, sizeof BOGUS_DATA);
 
         if (sleep((nevts < MAX_EVENTS) ? SLEEP_TIME : COMA_TIME) != 0)
             die("sleep");
