@@ -73,12 +73,13 @@ static const unsigned char BANNER_AND_KEXINIT[238] = {
     'e','v','a',':','*',':',  /* padding, delicious like the cookie */
 };
 
-static const unsigned char BOGUS_DATA[16] = {  /* junk repeatedly sent */
+static const unsigned char BOGUS_DATA[32] = {  /* junk repeatedly sent */
     0, 0, 0x9c, 0x3c,  /* ~ max packet length allowed by libssh2 (40kB) ;-) */
     12,
     SSH_MSG_KEXDH_REPLY,
     0, 0, 0x9b, 0,     /* "key & certificates" length (keep it plausible)   */
-    '1','0','2','9',':','1'
+    '1','0','2','9',':','1','0','2','9',':',
+    'E','v','a',' ','R','u','h','r','l','a','d','i'
 };
 
 static size_t
