@@ -32,7 +32,7 @@ enum {
     SLEEP_TIME  =   9,  /* seconds of rest between writes to clients    */
 
     LISTEN_FD       = STDIN_FILENO,       /* server socket, passed by systemd */
-    FIRST_CLIENT_FD = STDERR_FILENO + 1,  /* first free file descriptor       */
+    FIRST_CLIENT_FD = STDERR_FILENO + 1,  /* first free(able) file descriptor */
 
     END =  0,  /* never allocated / terminating marker in the clients array  */
     RIP = -1,  /* "once allocated, may not be the last occupied slot" marker */
@@ -222,11 +222,40 @@ handle_clients(int clients[], const void *data, size_t datalen)
     return writes;
 }
 
+static void
+clean_file_descriptors(void)  /* to ensure no jumps in clients array indexes */
+{
+    enum { NFDS = MAX_CLIENTS + 3 };
+    struct pollfd pfds[NFDS];
+    int i;
+
+    for (i = 0; i < NFDS; i++)
+        pfds[i].fd = i;
+
+    if (poll(pfds, NFDS, 0) == -1)
+        die("poll");
+
+    /* std{in,out,err} must be opened, not allocatable to client sockets: */
+    if (pfds[0].revents & POLLNVAL) { errno = EBADF; die("stdin"); }
+    if (pfds[1].revents & POLLNVAL) { errno = EBADF; die("stdout"); }
+    if (pfds[2].revents & POLLNVAL) { errno = EBADF; die("stderr"); }
+
+    /* On the other hand, fds intended for client sockets must be available: */
+    for (i = FIRST_CLIENT_FD; i < NFDS; i++)
+        if (!(pfds[i].revents & POLLNVAL)) {
+            close(i);
+            dprintf(STDERR_FILENO, "warning: closed fd %u "
+                    "(intended to be a future client socket)\n", i);
+        }
+}
+
 int
 main()
 {
     int clients[MAX_CLIENTS] = { END };
     struct pollfd pfd[1]     = { { LISTEN_FD, POLLIN, 0 } };
+
+    clean_file_descriptors();
 
     for (;;) {
         int timeout;
