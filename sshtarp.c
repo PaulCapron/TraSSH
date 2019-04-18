@@ -5,7 +5,7 @@
  * this tarpit monologues more of the SSH protocol, fooling more bots.
  * It keeps no client state, and it is not dynamically configurable.
  *
- * Linux-only (epoll). Delegates to systemd socket setup and sandboxing.
+ * Linux-only. Delegates to systemd socket setup and sandboxing.
  * No stdio or stdlib use. Static link with <https://www.musl-libc.org/>.
  *
  * For reference, see "The Secure Shell (SSH) Transport Layer Protocol",
@@ -19,19 +19,23 @@
 
 #define _GNU_SOURCE  /* accept4 */
 #include <netinet/in.h>
-#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <poll.h>
 #include <stdarg.h>
 #include <string.h>  /* strerror */
+#include <time.h>
 #include <unistd.h>
 
 enum {
-    MAX_EVENTS = 512,  /* max number of events/fds per epoll run */
-    SLEEP_TIME =   9,  /* seconds of rest between epoll runs     */
-    COMA_TIME  = SLEEP_TIME * 3,  /* rest if max events reached  */
+    MAX_CLIENTS = 512,  /* max number of simultaneously connected peers */
+    SLEEP_TIME  =   9,  /* seconds of rest between writes to clients    */
 
-    LISTEN_FD = STDIN_FILENO,  /* server socket, passed by systemd */
+    LISTEN_FD       = STDIN_FILENO,       /* server socket, passed by systemd */
+    FIRST_CLIENT_FD = STDERR_FILENO + 1,  /* first free file descriptor       */
+
+    END =  0,  /* never allocated / terminating marker in the clients array  */
+    RIP = -1,  /* "once allocated, may not be the last occupied slot" marker */
 
     SSH_MSG_KEXINIT     = 20,  /* code for a SSH key-exchange init message */
     SSH_MSG_KEXDH_REPLY = 31   /* Diffie-Hellman key exchange, from server */
@@ -131,20 +135,19 @@ dprintf(int fd, const char *fmt, ...)  /* light version of stdio dprintf */
     return write(fd, buf, j);
 }
 
-static void __attribute__((cold))
+static void __attribute__((cold, noreturn))
 die(const char *msg)
 {
     dprintf(STDERR_FILENO, "%s: %s\n", msg, strerror(errno));
     _exit(2);
 }
 
-static int
-welcome_new_client(int srvfd, int epollfd)
+static void
+welcome_new_client(int srvfd, int clients[])
 {
     struct sockaddr_storage addr;
     socklen_t addrlen;
     int fd;
-    struct epoll_event evt;
     unsigned char *ip;
 
     addrlen = sizeof addr;
@@ -156,13 +159,8 @@ welcome_new_client(int srvfd, int epollfd)
         dprintf(STDOUT_FILENO, "could not greet %u: %s\n",
                 (unsigned)fd, strerror(errno));
         close(fd);
-        return 0;  /* not really welcomed */
+        return;
     }
-
-    evt.events = EPOLLOUT;
-    evt.data.fd = fd;
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &evt) == -1)
-        die("epoll_clt");
 
     switch (addr.ss_family) {
     case AF_INET:
@@ -184,60 +182,67 @@ welcome_new_client(int srvfd, int epollfd)
     default:
         dprintf(STDOUT_FILENO, "new con, fd %u\n", fd);
     }
-    return 1;
+
+    if (fd < FIRST_CLIENT_FD || fd >= MAX_CLIENTS - FIRST_CLIENT_FD) {
+        errno = EFAULT;
+        die("last client fd makes for an out of bounds index");
+    }
+    clients[fd - FIRST_CLIENT_FD] = fd;
 }
 
-static void
-handle_client(struct epoll_event evt, const void *data, size_t datalen)
+static int
+handle_clients(int clients[], const void *data, size_t datalen)
 {
-    char *reason;
-    ssize_t written;
-    int fd = evt.data.fd;
+    int i, writes, fd;
 
-    if (evt.events & EPOLLHUP) { reason = "peer closed"; goto close; }
-    if (evt.events & EPOLLERR) { reason = "epoll error"; goto close; }
+    for (i = writes = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i] == END) break;
+        if (clients[i] == RIP) continue;
 
-    written = write(fd, data, datalen);
-    if (written == -1) {
-        reason = strerror(errno);
-        goto close;
-    } else if ((size_t)written < datalen) {
-        reason = "short write";
-        goto close;
+        fd = clients[i];
+        if (write(fd, data, datalen) == (ssize_t)datalen) {
+            writes++;
+        } else {
+            dprintf(STDOUT_FILENO, "closing fd %u: %s\n", fd, strerror(errno));
+            /* errno may just be EWOULDBLOCK, or even 0 in case of short write.
+               Slow clients get nuked, by design. */
+            close(fd);
+            clients[i] = RIP;
+        }
     }
-    return;
- close:
-    dprintf(STDOUT_FILENO, "closing fd %u: %s\n", (unsigned)fd, reason);
-    close(fd);
+
+    if (writes == MAX_CLIENTS) {  /* full; make some room */
+        for (i = 0; i < MAX_CLIENTS; i += (MAX_CLIENTS / 32)) {
+            fd = clients[i];
+            dprintf(STDOUT_FILENO, "closing fd %u: max clients reached\n", fd);
+            close(fd);
+            clients[i] = RIP;
+        }
+    }
+    return writes;
 }
 
 int
 main()
 {
-    int epfd, nevts, i;
-    struct epoll_event evt, evts[MAX_EVENTS];
-
-    epfd = epoll_create1(EPOLL_CLOEXEC);  /* safety close-on-exec */
-    if (epfd == -1)
-        die("epoll_create1");
-
-    evt.events = EPOLLIN;
-    evt.data.fd = LISTEN_FD;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, LISTEN_FD, &evt) == -1)
-        die("epoll_ctl(LISTEN_FD)");
+    int clients[MAX_CLIENTS] = { END };
+    struct pollfd pfd[1]     = { { LISTEN_FD, POLLIN, 0 } };
 
     for (;;) {
-        nevts = epoll_wait(epfd, evts, MAX_EVENTS, -1);
-        if (nevts == -1)
-            die("epoll_wait");
+        int timeout;
+        time_t start = time(NULL);
 
-        for (i = 0; i < nevts; i++)
-            if (evts[i].data.fd == LISTEN_FD)
-                welcome_new_client(LISTEN_FD, epfd);
-            else
-                handle_client(evts[i], BOGUS_DATA, sizeof BOGUS_DATA);
+        if (handle_clients(clients, BOGUS_DATA, sizeof BOGUS_DATA) == 0)
+            timeout = -1;  /* no clients; wait for one indefinitely */
+        else
+            timeout = SLEEP_TIME * 1000;
 
-        if (sleep((nevts < MAX_EVENTS) ? SLEEP_TIME : COMA_TIME) != 0)
-            die("sleep");
+        switch(poll(pfd, 1, timeout)) {
+        case -1:
+            die("poll");
+        case 1:
+            welcome_new_client(LISTEN_FD, clients);
+            sleep(time(NULL) - start);
+        }
     }
 }
