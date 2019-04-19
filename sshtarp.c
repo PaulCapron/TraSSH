@@ -28,8 +28,9 @@
 #include <unistd.h>
 
 enum {
-    MAX_CLIENTS = 512,  /* max number of simultaneously connected peers */
-    SLEEP_TIME  =   9,  /* seconds of rest between writes to clients    */
+    MAX_CLIENTS      = 512,  /* max number of simultaneously connected peers  */
+    WRITES_INTERVAL  =  18,  /* seconds of rest between writes to clients     */
+    ACCEPTS_INTERVAL =   5,  /* seconds of rest between accepts of new peers  */
 
     LISTEN_FD       = STDIN_FILENO,       /* server socket, passed by systemd */
     FIRST_CLIENT_FD = STDERR_FILENO + 1,  /* first free(able) file descriptor */
@@ -140,6 +141,21 @@ die(const char *msg)
 {
     dprintf(STDERR_FILENO, "%s: %s\n", msg, strerror(errno));
     _exit(2);
+}
+
+static void
+sleeptill(time_t deadline)
+{
+    struct timespec t;
+    int r;
+
+    t.tv_sec = deadline;
+    t.tv_nsec = 0;
+    r = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &t, NULL);
+    if (r != 0) {
+        errno = r;  /* cannot be EINTR: no signals are handled */
+        die("clock_nanosleep");
+    }
 }
 
 static void
@@ -254,24 +270,34 @@ main()
 {
     int clients[MAX_CLIENTS] = { END };
     struct pollfd pfd[1]     = { { LISTEN_FD, POLLIN, 0 } };
+    time_t nextwrite         = 0;
+    time_t nextaccept        = 0;
 
     clean_file_descriptors();
 
     for (;;) {
         int timeout;
-        time_t start = time(NULL);
+        time_t now = time(NULL);
 
-        if (handle_clients(clients, BOGUS_DATA, sizeof BOGUS_DATA) == 0)
-            timeout = -1;  /* no clients; wait for one indefinitely */
-        else
-            timeout = SLEEP_TIME * 1000;
-
-        switch(poll(pfd, 1, timeout)) {
-        case -1:
-            die("poll");
-        case 1:
-            welcome_new_client(LISTEN_FD, clients);
-            sleep(time(NULL) - start);
+        if (now >= nextwrite) {
+            nextwrite = now + WRITES_INTERVAL;
+            if (handle_clients(clients, BOGUS_DATA, sizeof BOGUS_DATA) == 0)
+                timeout = -1;  /* no clients; wait for one indefinitely */
+            else
+                timeout = WRITES_INTERVAL * 1000;
+        } else {
+            timeout = (nextwrite - now) * 1000;
         }
+
+        if (now >= nextaccept)
+            switch(poll(pfd, 1, timeout)) {
+            case -1: die("poll");
+            case 0: continue;  /* timed out; no need to sleep */
+            case 1:
+                welcome_new_client(LISTEN_FD, clients);
+                nextaccept = time(NULL) + ACCEPTS_INTERVAL;
+            }
+
+        sleeptill((nextaccept < nextwrite) ? nextaccept : nextwrite);
     }
 }
