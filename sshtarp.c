@@ -143,6 +143,17 @@ die(const char *msg)
     _exit(2);
 }
 
+static time_t
+roughmonotime(void)  /* seconds elapsed, roughly, since some arbitrary epoch */
+{
+    struct timespec t;
+
+    if (clock_gettime(CLOCK_MONOTONIC_COARSE, &t) == -1)
+        die("clock_gettime");
+
+    return (t.tv_nsec >= 500000000) ? (t.tv_sec + 1) : t.tv_sec;
+}
+
 static void
 sleeptill(time_t deadline)
 {
@@ -151,7 +162,7 @@ sleeptill(time_t deadline)
 
     t.tv_sec = deadline;
     t.tv_nsec = 0;
-    r = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &t, NULL);
+    r = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &t, NULL);
     if (r != 0) {
         errno = r;  /* cannot be EINTR: no signals are handled */
         die("clock_nanosleep");
@@ -277,7 +288,7 @@ main()
 
     for (;;) {
         int timeout;
-        time_t now = time(NULL);
+        time_t now = roughmonotime();
 
         if (now >= nextwrite) {
             nextwrite = now + WRITES_INTERVAL;
@@ -295,7 +306,7 @@ main()
             case 0: continue;  /* timed out; no need to sleep */
             case 1:
                 welcome_new_client(LISTEN_FD, clients);
-                nextaccept = time(NULL) + ACCEPTS_INTERVAL;
+                nextaccept = roughmonotime() + ACCEPTS_INTERVAL;
             }
 
         sleeptill((nextaccept < nextwrite) ? nextaccept : nextwrite);
