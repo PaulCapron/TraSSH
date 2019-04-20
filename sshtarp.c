@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <stdarg.h>
-#include <string.h>  /* strerror */
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -88,12 +88,15 @@ static const unsigned char BOGUS_DATA[32] = {  /* junk repeatedly sent */
 };
 
 static size_t
-utoa(unsigned num, char *dst, unsigned radix)  /* does not null-terminate dst */
+utoa(unsigned num, unsigned radix, char *dst, size_t dstcapacity)
 {
     unsigned n, r;
     size_t len;
 
     for (n = num, len = 1; n > radix-1; n /= radix, len++) ;  /* count digits */
+    if (len > dstcapacity)
+        return 0;
+
     n = len - 1;  /* write in reverse */
     do {
         r = num % radix;
@@ -108,25 +111,30 @@ dprintf(int fd, const char *fmt, ...)  /* light version of stdio dprintf */
 {
     char buf[256];
     va_list args;
-    int i, j;
+    unsigned i, j;
     char *s;
+    size_t slen;
 
     va_start(args, fmt);
-    for (i = j = 0; fmt[i] != '\0'; i++) {
+    for (i = j = 0; fmt[i] != '\0' && j < sizeof buf; i++) {
         if (fmt[i] != '%') {
             buf[j++] = fmt[i];
             continue;
         }
         switch (fmt[++i]) {
         case 'u':
-            j += utoa(va_arg(args, unsigned), buf + j,  10);
+            j += utoa(va_arg(args, unsigned), 10, buf + j, sizeof buf - j);
             break;
         case 'x':
-            j += utoa(va_arg(args, unsigned), buf + j,  16);
+            j += utoa(va_arg(args, unsigned), 16, buf + j, sizeof buf - j);
             break;
         case 's':
             s = va_arg(args, char*);
-            while (*s != '\0') buf[j++] = *s++;
+            slen = strlen(s);
+            if (slen <= sizeof buf - j) {
+                memcpy(buf + j, s, slen);
+                j += slen;
+            }
             break;
         default:
             ;  /* not implemented! */
