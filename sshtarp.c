@@ -148,7 +148,7 @@ static void __attribute__((cold, noreturn))
 die(const char *msg)
 {
     dprintf(STDERR_FILENO, "%s: %s\n", msg, strerror(errno));
-    _exit(2);
+    _exit(1);
 }
 
 static time_t
