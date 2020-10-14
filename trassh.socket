@@ -1,0 +1,20 @@
+[Unit]
+Description=TraSSH socket
+
+[Install]
+WantedBy=sockets.target
+
+[Socket]
+ListenStream=0.0.0.0:22
+
+Backlog=32
+DeferAcceptSec=1s
+ReceiveBuffer=2K
+SendBuffer=2K
+NoDelay=true
+IPTOS=low-cost
+
+IPAccounting=true
+
+ExecStartPost=iptables -A OUTPUT -p tcp --sport 22 --tcp-flags RST RST -j DROP
+ExecStopPost=iptables -D OUTPUT -p tcp --sport 22 --tcp-flags RST RST -j DROP

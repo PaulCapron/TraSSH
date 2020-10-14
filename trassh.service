@@ -1,0 +1,54 @@
+[Unit]
+Description=TraSSH dæmon
+Requires=trassh.socket
+
+[Service]
+ExecStart=/usr/local/bin/trassh
+StandardInput=file:/var/local/trassh.dat
+DynamicUser=true
+
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+TimerSlackNSec=150ms
+OOMScoreAdjust=1000
+
+LimitFSIZE=0
+LimitNPROC=1
+LimitNOFILE=8
+LimitAS=640K
+
+SystemCallArchitectures=native
+SystemCallFilter=arch_prctl write fstat mmap setsockopt accept getsockopt sendto nanosleep recvfrom close
+
+; The above syscall whitelist is, I think, enough to (heavily!) sandbox,
+; and everything that follows is redundant/useless (because less stringent.)
+;
+; The first next group appeases me tho, as an extra explicit safety net.
+;
+; The second one is only to please `systemd-analyze security trassh.service',
+; which is dumb; see https://GitHub.com/systemd/systemd/issues/15758
+
+TemporaryFileSystem=/:ro
+PrivateUsers=true
+PrivateNetwork=true
+ProtectHostname=true
+NoNewPrivileges=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=
+
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+DevicePolicy=strict
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+RestrictAddressFamilies=AF_UNIX
+RestrictAddressFamilies=~AF_UNIX
+RestrictSUIDSGID=true
+UMask=0777
