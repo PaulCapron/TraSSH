@@ -29,7 +29,7 @@ func main() {
 		Timeout:         5 * time.Second,
 	}
 
-    log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
 	log.Println("Attempting SSH connection to", addr, "…")
 
@@ -37,5 +37,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-    client.Close()
+	client.Close()
 }
