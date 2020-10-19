@@ -29,9 +29,9 @@ trassh: trassh.c
 
 trassh.dat: packcraft.pl
 	printf "$(BANNER)" >$@
-	./packcraft.pl kexinit $(KEYTYPE) >>$@ </dev/urandom
-	./packcraft.pl kexdhreply $(KEYTYPE) >>$@ </dev/urandom
-	./packcraft.pl newkeys >>$@
+	./$? kexinit $(KEYTYPE) >>$@ </dev/urandom
+	./$? kexdhreply $(KEYTYPE) >>$@ </dev/urandom
+	./$? newkeys >>$@
 	wc -c $@
 
 install: $(BIN_DIR)/trassh $(DAT_DIR)/trassh.dat
