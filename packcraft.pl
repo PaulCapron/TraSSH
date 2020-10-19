@@ -345,9 +345,12 @@ if ($ARGV[0] eq 'kexinit' || $ARGV[0] eq 'kexdhreply') {
       $key = hostkey_rsa($e, $n);
       $sig = signedhash_rsa(fake_rsa_sig($n));
 
-      warn "OpenSSL refuses a " . $size . "-bit RSA key/sig; its max is 16 KiB"
+      # https://git.OpenSSL.org/gitweb/?p=openssl.git;f=include/openssl/rsa.h;hb=62f27ab9d#l37
+      warn "OpenSSL refuses a $size-bit RSA key/sig; its max is 16 KiB"
           if $size > (16 * 1024);
-      warn "MBedTLS refuses a " . $size . "-bit RSA key/sig; its max is 8 KiB"
+
+      # https://GitHub.com/ARMmbed/mbedtls/commit/da1b4de0e
+      warn "MbedTLS refuses a $size-bit RSA key/sig; its max is 8 KiB"
           if $size > (8 * 1024);
     }
     $payload = kexdhreply($key, $sig);
