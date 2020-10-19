@@ -10,7 +10,7 @@ ListenStream=0.0.0.0:22
 Backlog=32
 DeferAcceptSec=1s
 ReceiveBuffer=2K
-SendBuffer=2K
+SendBuffer=4K
 NoDelay=true
 IPTOS=low-cost
 
