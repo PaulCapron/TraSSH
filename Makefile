@@ -37,8 +37,7 @@ trassh.dat: packcraft.pl
 install: $(BIN_DIR)/trassh $(DAT_DIR)/trassh.dat
 
 uninstall:
-	rm $(BIN_DIR)/trassh
-	rm $(DAT_DIR)/trassh.dat
+	rm $(BIN_DIR)/trassh $(DAT_DIR)/trassh.dat
 
 $(BIN_DIR)/trassh: trassh
 	install -o root -m 0755 $? $@
