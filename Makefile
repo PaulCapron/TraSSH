@@ -13,7 +13,7 @@ PORT = 2222
 
 # For the “[un]install” and “[un]service” targets
 BIN_DIR = /usr/local/bin
-DAT_DIR = /var/local
+DAT_DIR = /usr/local/share
 SD_DIR  = /etc/systemd/system
 
 .PHONY: build clean install uninstall service unservice run test cloc speed
@@ -57,7 +57,7 @@ unservice:
 	systemctl daemon-reload
 
 $(SD_DIR)/trassh.service: trassh.service
-	sed -e 's,/usr/local/bin,$(BIN_DIR),' -e 's,/var/local,$(DAT_DIR),' $? >$@
+	sed -e 's,/usr/local/bin,$(BIN_DIR),' -e 's,/usr/local/share,$(DAT_DIR),' $? >$@
 
 $(SD_DIR)/trassh.socket: trassh.socket
 	cp $? $@

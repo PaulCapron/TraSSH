@@ -4,7 +4,7 @@ Requires=trassh.socket
 
 [Service]
 ExecStart=/usr/local/bin/trassh
-StandardInput=file:/var/local/trassh.dat
+StandardInput=file:/usr/local/share/trassh.dat
 DynamicUser=true
 
 CPUSchedulingPolicy=idle
