@@ -241,13 +241,8 @@ main(void)
 			if (fd == -1)
 				die("accept() failed: %m");
 
-			if (addr.ss_family != AF_INET && addr.ss_family != AF_INET6) {
-				warn("Connection, unknown address family #%u", addr.ss_family);
-				fstsegsiz = datlen;
-				goto first_send;
-			}
-
 			if (getsockopt(fd, IPPROTO_TCP, TCP_MAXSEG, &mss, &msslen) == -1)
+				/* Too much of this program is geared towards TCP/IP: */
 				die("getsockopt(TCP_MAXSEG) failed: %m");
 
 			switch (addr.ss_family) {
@@ -272,6 +267,9 @@ main(void)
 					(ip[12]<<8)+ip[13], (ip[14]<<8)+ip[15], mss);
 				/* This doesn’t shorten the longest run of ‘0:’ to ‘::’ 😑 */
 				break;
+			default:
+				/* In case the above getsockopt(TCP_MAXSEG) didn’t fail ?!: */
+				die("address family #%u: not AF_INET/AF_INET6", addr.ss_family);
 			}
 
 			if (mss < MIN_SEG_SIZE) {
@@ -293,7 +291,7 @@ main(void)
 		/*
 		 * Send first part of data:
 		 */
-	first_send: {
+		{
 			ssize_t sent;
 
 			sent = send(fd, dat, fstsegsiz, MSG_NOSIGNAL|MSG_DONTWAIT);
