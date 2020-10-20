@@ -363,7 +363,7 @@ main(void)
 			sent = send(fd, datptr, datremain, MSG_NOSIGNAL|MSG_DONTWAIT);
 			if (sent < 1) {
 				if (errno == EFAULT)
-					die("└ send(%lu bytes) failed: %m", fstsegsiz);
+					die("└ send(%lu bytes) failed: %m", datremain);
 				warn("├ send(%lu bytes) failed: %m", datremain);
 				break;
 			}
