@@ -330,6 +330,7 @@ main(void)
 		{
 			char buf[2048];	 /* oversized, to see if client also sent KEXINIT */
 			ssize_t got;
+			size_t max;
 			char *eol;
 
 			got = recv(fd, buf, sizeof buf, MSG_NOSIGNAL|MSG_DONTWAIT);
@@ -340,7 +341,8 @@ main(void)
 
 			if (got < 10
 				|| memcmp(buf, "SSH-", 4) != 0
-				|| (eol = memchr(buf + 4, '\n', BANNER_MAXLEN)) == NULL) {
+				|| (max = (got < BANNER_MAXLEN) ? got : BANNER_MAXLEN,
+				    (eol = memchr(buf + 4, '\n', max)) == NULL)) {
 				warn("├ received %lu bytes, no banner inside", got);
 				goto end;
 			}
