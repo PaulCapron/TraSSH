@@ -205,7 +205,7 @@ sub new_ecdsa384_pubkey() {
   };
   use constant {
     # We’ll use the following constants wrt. quadratic residue:
-    NISTP384_PMINUS1_HALFED => NISTP384_P->copy->bdec->brsft(1),
+    NISTP384_PMINUS1_HALVED => NISTP384_P->copy->bdec->brsft(1),
     NISTP384_PPLUS1_QUARTERED => NISTP384_P->copy->binc->brsft(2)
   };
 
@@ -226,7 +226,7 @@ sub new_ecdsa384_pubkey() {
         ->bmod(NISTP384_P);  # …in 𝔽𝑝
 
     # There may actually be no 𝒚 such as 𝒚² ≡ 𝒙³+𝑎⋅𝒙+𝑏 (mod 𝑝). Let’s check:
-    $legendre = $rhs->copy->bmodpow(NISTP384_PMINUS1_HALFED, NISTP384_P);
+    $legendre = $rhs->copy->bmodpow(NISTP384_PMINUS1_HALVED, NISTP384_P);
   } while (!$legendre->is_one);
 
   # Now that we have a valid 𝒙, getting 𝒚 is easy — only because 𝑝 ≡ 3 mod 4;
