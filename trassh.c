@@ -374,10 +374,11 @@ main(void)
 		}
 
 	end:
-		flush();
-
-		if (sleepremain > 0 && sleep(sleepremain) > 0)
-			warn("├ sleep() interrupted");
+		if (sleepremain > 0) {
+			flush();
+			if (sleep(sleepremain) > 0)
+				warn("├ sleep() interrupted");
+		}
 
 		if (close(fd) == -1)
 			warn("└ close() failed: %m");
