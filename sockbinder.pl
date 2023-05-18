@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # This is a minimal launcher for `trassh', useful during development.
 # It depends only on Perl and some of its built-in modules.
-# Example usage:  make && ./sockmaker.pl 2222 ./trassh <trassh.dat
+# Example usage:  make && ./sockbinder.pl 2222 ./trassh <trassh.dat
 use Socket;
 use constant SOCK_FD => 3;
 
